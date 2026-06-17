@@ -13,7 +13,7 @@ public class AdresseReseau {
     }
 
     public AdresseReseau(String ip, String masque) {
-        this("","", ip, masque);
+        this("", "", ip, masque);
     }
 
     public AdresseReseau(String ip, int prefixeCIDR) {
@@ -92,15 +92,19 @@ public class AdresseReseau {
 
     public String toJson() {
         return String.format(
-                "{\"nom\":\"%s\",\"type\":\"%s\",\"adresse reseau\":\"%s\",\"ip\":\"%s\",\"masque\":\"%s\",\"adresse broadcast\":\"%s\",\"nombre hotes\":%d}",
+                "{\"nom\":\"%s\",\"type\":\"%s\",\"ip\":\"%s\",\"masque\":\"%s\",\"adresse reseau\":\"%s\",\"adresse broadcast\":\"%s\",\"nombre hotes\":%d}",
                 nom,
                 type,
-                entierEnAdresse(adresseReseau().ip),
                 entierEnAdresse(ip),
                 entierEnAdresse(masque),
+                entierEnAdresse(adresseReseau().ip),
                 entierEnAdresse(adresseBroadcast().ip),
                 nombreHotes()
         );
+    }
+
+    public String getType() {
+        return this.type;
     }
 
     @Override
