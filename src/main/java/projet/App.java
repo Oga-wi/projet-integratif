@@ -81,8 +81,7 @@ public final class App {
                     masqueStr,
                     reseauStr,
                     broadcastStr,
-                    a.nombreHotes()
-            ));
+                    a.nombreHotes()));
         }
 
         md.append("## Connexions Réseau\n\n");
@@ -95,6 +94,31 @@ public final class App {
                     c.getEquipementB().getNom(),
                     c.getTypeConnexion(),
                     c.getDebitMbps()));
+        }
+        md.append("\n");
+
+        md.append("## Réseaux Distincts\n\n");
+        md.append("| Réseau | Masque | Broadcast | Équipements | Hôtes max |\n");
+        md.append("| :--- | :--- | :--- | :--- | :---: |\n");
+
+        Map<String, List<AdresseReseau>> parReseau = adresses.stream()
+                .collect(Collectors.groupingBy(a -> a.adresseReseau().toString().split(" : ")[1].split(" / ")[0]));
+
+        for (Map.Entry<String, List<AdresseReseau>> entree : parReseau.entrySet()) {
+            AdresseReseau ref = entree.getValue().get(0);
+            String adresseReseau = entree.getKey();
+            String masque = ref.adresseReseau().toString().split(" / ")[1];
+            String broadcast = ref.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
+            String equipements = entree.getValue().stream()
+                    .map(AdresseReseau::getNom)
+                    .collect(Collectors.joining(", "));
+
+            md.append(String.format("| %s | %s | %s | %s | %,d |\n",
+                    adresseReseau,
+                    masque,
+                    broadcast,
+                    equipements,
+                    ref.nombreHotes()));
         }
         md.append("\n");
 
