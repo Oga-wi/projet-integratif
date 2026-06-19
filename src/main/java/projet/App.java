@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser; // <-- Import réajouté ici
+import com.google.gson.JsonParser;
 
 public final class App {
     private App() {
@@ -143,6 +143,11 @@ public final class App {
 
         switch (choixIA) {
             case 1:
+                String geminiKey = System.getenv("GOOGLE_API_KEY");
+                if (geminiKey == null || geminiKey.isBlank()) {
+                    System.err.println("Erreur : variable d'environnement GOOGLE_API_KEY non définie.");
+                    break;
+                }
                 System.out.println("Analyse IA avec Gemini 2.5 Flash-Lite...");
                 try {
                     Client client = new Client();
@@ -154,10 +159,7 @@ public final class App {
                     String analyse = response.text();
 
                     md.append("## Analyse IA\n\n");
-                    md.append(analyse).append("\n");
-
-                    System.out.println("\n=== Analyse Gemini ===");
-                    System.out.println(analyse);
+                    md.append(analyse).append("Analyse réalisée avec Gemini 2.5 Flash-Lite.\n").append("\n");
 
                 } catch (Exception e) {
                     System.err.println("Erreur Gemini : " + e.getMessage());
@@ -165,6 +167,11 @@ public final class App {
                 break;
 
             case 2:
+                String apiKey = System.getenv("OPENROUTER_API_KEY");
+                if (apiKey == null || apiKey.isBlank()) {
+                    System.err.println("Erreur : variable d'environnement OPENROUTER_API_KEY non définie.");
+                    break;
+                }
                 System.out.println("Analyse IA avec OpenRouter Free...");
                 try {
                     String SYSTEM_PROMPT = "Tu es un assistant utile qui analyse des rapports réseau.";
@@ -210,8 +217,8 @@ public final class App {
                             .getAsJsonObject("message")
                             .get("content").getAsString();
 
-                    md.append("## Analyse IA\n\n").append(analyse).append("\n");
-                    System.out.println("\n=== Analyse OpenRouter ===\n" + analyse);
+                    md.append("## Analyse IA\n\n").append("Analyse réalisée avec OpenRouter Free.\n").append(analyse)
+                            .append("\n");
 
                 } catch (Exception e) {
                     System.err.println("Erreur OpenRouter : " + e.getMessage());
