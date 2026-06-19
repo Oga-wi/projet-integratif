@@ -8,6 +8,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
+
 public final class App {
 
     private App() {
@@ -121,6 +124,25 @@ public final class App {
                     ref.nombreHotes()));
         }
         md.append("\n");
+
+        try {
+            Client client = new Client();
+            GenerateContentResponse response = client.models.generateContent(
+                    "gemini-2.5-flash-lite",
+                    "Voici un rapport réseau en Markdown :\n\n" + md.toString() +
+                            "\n\nFais un résumé de l'état de ce réseau, en français. Les premier titre doivent être en ####",
+                    null);
+            String analyse = response.text();
+
+            md.append("## Analyse IA\n\n");
+            md.append(analyse).append("\n");
+
+            System.out.println("\n=== Analyse Gemini ===");
+            System.out.println(analyse);
+
+        } catch (Exception e) {
+            System.err.println("Erreur Gemini : " + e.getMessage());
+        }
 
         try {
             Files.writeString(Path.of("rapport_statistiques.md"), md.toString());
