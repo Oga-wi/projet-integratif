@@ -1,19 +1,38 @@
 package projet;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.stream.Collectors;
 
-public final class App {
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 
+public final class App {
     private App() {
     }
 
     public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("=== Choisissez le modèle d'analyse IA ===");
+        System.out.println("1. Gemini 2.5 Flash-Lite (gratuit)");
+        System.out.println("2. OpenRouter Free (gratuit)");
+        System.out.println("0. Aucune analyse IA");
+        System.out.print("Votre choix : ");
+
+        int choixIA = scanner.nextInt();
+        scanner.close();
+
         List<AdresseReseau> adresses = new ArrayList<>();
 
         AdresseReseau pc1 = new AdresseReseau("PC1", "Ordinateur", "192.168.10.100", "255.255.255.0");
@@ -121,6 +140,94 @@ public final class App {
                     ref.nombreHotes()));
         }
         md.append("\n");
+
+        switch (choixIA) {
+            case 1:
+                String geminiKey = System.getenv("GOOGLE_API_KEY");
+                if (geminiKey == null || geminiKey.isBlank()) {
+                    System.err.println("Erreur : variable d'environnement GOOGLE_API_KEY non définie.");
+                    break;
+                }
+                System.out.println("Analyse IA avec Gemini 2.5 Flash-Lite...");
+                try {
+                    Client client = new Client();
+                    GenerateContentResponse response = client.models.generateContent(
+                            "gemini-2.5-flash-lite",
+                            "Voici un rapport réseau en Markdown :\n\n" + md.toString() +
+                                    "\n\nFais un résumé de l'état de ce réseau, en français. Les premier titre doivent être en ####",
+                            null);
+                    String analyse = response.text();
+
+                    md.append("## Analyse IA\n\n");
+                    md.append(analyse).append("Analyse réalisée avec Gemini 2.5 Flash-Lite.\n").append("\n");
+
+                } catch (Exception e) {
+                    System.err.println("Erreur Gemini : " + e.getMessage());
+                }
+                break;
+
+            case 2:
+                String apiKey = System.getenv("OPENROUTER_API_KEY");
+                if (apiKey == null || apiKey.isBlank()) {
+                    System.err.println("Erreur : variable d'environnement OPENROUTER_API_KEY non définie.");
+                    break;
+                }
+                System.out.println("Analyse IA avec OpenRouter Free...");
+                try {
+                    String SYSTEM_PROMPT = "Tu es un assistant utile qui analyse des rapports réseau.";
+                    String contenu = "Analyse ce rapport réseau :\n\n" + md.toString();
+
+                    JsonObject messageSystem = new JsonObject();
+                    messageSystem.addProperty("role", "system");
+                    messageSystem.addProperty("content", SYSTEM_PROMPT);
+
+                    JsonObject messageUser = new JsonObject();
+                    messageUser.addProperty("role", "user");
+                    messageUser.addProperty("content", contenu);
+
+                    com.google.gson.JsonArray messages = new com.google.gson.JsonArray();
+                    messages.add(messageSystem);
+                    messages.add(messageUser);
+
+                    JsonObject jsonRequestBody = new JsonObject();
+                    jsonRequestBody.addProperty("model", "openrouter/free");
+                    jsonRequestBody.add("messages", messages);
+
+                    String body = jsonRequestBody.toString();
+
+                    HttpClient httpClient = HttpClient.newHttpClient();
+                    HttpRequest request = HttpRequest.newBuilder()
+                            .uri(URI.create("https://openrouter.ai/api/v1/chat/completions"))
+                            .header("Content-Type", "application/json")
+                            .header("Authorization", "Bearer " + System.getenv("OPENROUTER_API_KEY"))
+                            .POST(HttpRequest.BodyPublishers.ofString(body))
+                            .build();
+
+                    String responseBody = httpClient.send(request, HttpResponse.BodyHandlers.ofString()).body();
+                    JsonObject json = JsonParser.parseString(responseBody).getAsJsonObject();
+
+                    if (json.has("error")) {
+                        System.err.println("Erreur renvoyée par l'API OpenRouter : "
+                                + json.getAsJsonObject("error").get("message").getAsString());
+                        break;
+                    }
+
+                    String analyse = json.getAsJsonArray("choices")
+                            .get(0).getAsJsonObject()
+                            .getAsJsonObject("message")
+                            .get("content").getAsString();
+
+                    md.append("## Analyse IA\n\n").append("Analyse réalisée avec OpenRouter Free.\n").append(analyse)
+                            .append("\n");
+
+                } catch (Exception e) {
+                    System.err.println("Erreur OpenRouter : " + e.getMessage());
+                }
+                break;
+
+            default:
+                System.out.println("Aucune dynamic IA sélectionnée.");
+        }
 
         try {
             Files.writeString(Path.of("rapport_statistiques.md"), md.toString());
