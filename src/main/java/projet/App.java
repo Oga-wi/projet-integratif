@@ -23,15 +23,16 @@ public final class App {
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("=== Choisissez le modèle d'analyse IA ===");
-        System.out.println("1. Gemini 2.5 Flash-Lite (gratuit)");
-        System.out.println("2. OpenRouter Free (gratuit)");
-        System.out.println("0. Aucune analyse IA");
-        System.out.print("Votre choix : ");
+        int choixIA;
+        try (Scanner scanner = new Scanner(System.in)) {
+            System.out.println("=== Choisissez le modèle d'analyse IA ===");
+            System.out.println("1. Gemini 2.5 Flash-Lite (gratuit)");
+            System.out.println("2. OpenRouter Free (gratuit)");
+            System.out.println("0. Aucune analyse IA");
+            System.out.print("Votre choix : ");
 
-        int choixIA = scanner.nextInt();
-        scanner.close();
+            choixIA = scanner.nextInt();
+        }
 
         List<AdresseReseau> adresses = new ArrayList<>();
 
@@ -149,8 +150,7 @@ public final class App {
                     break;
                 }
                 System.out.println("Analyse IA avec Gemini 2.5 Flash-Lite...");
-                try {
-                    Client client = new Client();
+                try (Client client = new Client()) {
                     GenerateContentResponse response = client.models.generateContent(
                             "gemini-2.5-flash-lite",
                             "Voici un rapport réseau en Markdown :\n\n" + md.toString() +
@@ -220,7 +220,11 @@ public final class App {
                     md.append("## Analyse IA\n\n").append("Analyse réalisée avec OpenRouter Free.\n").append(analyse)
                             .append("\n");
 
-                } catch (Exception e) {
+                } catch (java.io.IOException | InterruptedException e) {
+                    System.err.println("Erreur OpenRouter (I/O ou interruption) : " + e.getMessage());
+                } catch (com.google.gson.JsonSyntaxException e) {
+                    System.err.println("Erreur OpenRouter (JSON) : " + e.getMessage());
+                } catch (RuntimeException e) {
                     System.err.println("Erreur OpenRouter : " + e.getMessage());
                 }
                 break;
