@@ -6,8 +6,6 @@
 *.jar
 *.tar.gz
 *.zip
-*.json
-*.md
 
 # --- Dossiers de Build ---
 target/
@@ -16,3 +14,7 @@ pom.xml.releaseBackup
 pom.xml.next
 release.properties
 
+# --- Rapport
+rapport_statistiques.pdf
+rapport_statistiques.md
+adresses.json
