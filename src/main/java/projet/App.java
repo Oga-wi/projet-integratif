@@ -21,44 +21,47 @@ import com.google.gson.JsonParser;
 /**
  * Point d'entrée de l'application de génération de rapports réseau.
  *
- * <p>Ce programme :
+ * <p>
+ * Ce programme :
  * <ol>
- *   <li>Demande à l'utilisateur quel moteur d'IA utiliser pour l'analyse.</li>
- *   <li>Déclare une liste d'équipements réseau ({@link AdresseReseau}) et de
- *       liaisons ({@link ConnexionReseau}).</li>
- *   <li>Génère un rapport Markdown complet incluant un graphe de topologie
- *       Mermaid, des tableaux de statistiques et une analyse IA optionnelle.</li>
- *   <li>Écrit le rapport dans {@code rapport_statistiques.md}.</li>
+ * <li>Demande à l'utilisateur quel moteur d'IA utiliser pour l'analyse.</li>
+ * <li>Déclare une liste d'équipements réseau ({@link AdresseReseau}) et de
+ * liaisons ({@link ConnexionReseau}).</li>
+ * <li>Génère un rapport Markdown complet incluant un graphe de topologie
+ * Mermaid, des tableaux de statistiques et une analyse IA optionnelle.</li>
+ * <li>Écrit le rapport dans {@code rapport_statistiques.md}.</li>
  * </ol>
  */
 public final class App {
 
-    /** Classe utilitaire : constructeur privé pour interdire l'instanciation. */
+    /**
+     * Classe utilitaire : constructeur privé pour interdire l'instanciation.
+     */
     private App() {
     }
 
     // =========================================================================
     // Génération du graphe Mermaid
     // =========================================================================
-
     /**
-     * Génère un bloc de code Mermaid (syntaxe {@code graph TD}) représentant
-     * la topologie du réseau : nœuds colorés par type d'équipement et arêtes
+     * Génère un bloc de code Mermaid (syntaxe {@code graph TD}) représentant la
+     * topologie du réseau : nœuds colorés par type d'équipement et arêtes
      * annotées avec le type de liaison et le débit.
      *
-     * <p><b>Formes utilisées :</b>
+     * <p>
+     * <b>Formes utilisées :</b>
      * <ul>
-     *   <li>Routeur  → hexagone  {@code {{ }}}  (orange)</li>
-     *   <li>Serveur  → arrondi   {@code ( )}    (bleu)</li>
-     *   <li>Autres   → rectangle {@code [ ]}    (vert)</li>
+     * <li>Routeur → hexagone {@code {{ }}} (orange)</li>
+     * <li>Serveur → arrondi {@code ( )} (bleu)</li>
+     * <li>Autres → rectangle {@code [ ]} (vert)</li>
      * </ul>
      *
-     * @param adresses  liste de tous les équipements à afficher comme nœuds
+     * @param adresses   liste de tous les équipements à afficher comme nœuds
      * @param connexions liste des liaisons physiques entre équipements
      * @return chaîne Markdown contenant le bloc {@code ```mermaid ... ```}
      */
     private static String genererMermaidTopologie(List<AdresseReseau> adresses,
-                                                   List<ConnexionReseau> connexions) {
+            List<ConnexionReseau> connexions) {
         StringBuilder mermaid = new StringBuilder();
 
         // En-tête du bloc Mermaid : graphe orienté de haut en bas (TD = Top-Down)
@@ -70,21 +73,21 @@ public final class App {
         for (AdresseReseau a : adresses) {
             // sanitizeId remplace tout caractère non alphanumérique par "_"
             // car Mermaid n'accepte pas les tirets ou espaces dans les identifiants.
-            String id    = sanitizeId(a.getNom());
-            String ip    = a.toString().split(" : ")[1].split(" / ")[0];
+            String id = sanitizeId(a.getNom());
+            String ip = a.toString().split(" : ")[1].split(" / ")[0];
             String label = a.getNom() + "\\n" + ip;
 
             switch (a.getType()) {
                 case "Routeur":
-                    // Hexagone  {{label}}  → symbolise un routeur
+                    // Hexagone {{label}} → symbolise un routeur
                     mermaid.append(String.format("    %s{{%s}}\n", id, label));
                     break;
                 case "Serveur":
-                    // Arrondi  (label)  → symbolise un serveur
+                    // Arrondi (label) → symbolise un serveur
                     mermaid.append(String.format("    %s(%s)\n", id, label));
                     break;
                 default:
-                    // Rectangle  [label]  → postes, imprimantes, équipements inconnus
+                    // Rectangle [label] → postes, imprimantes, équipements inconnus
                     mermaid.append(String.format("    %s[%s]\n", id, label));
                     break;
             }
@@ -94,10 +97,10 @@ public final class App {
 
         // ── 2. Déclaration des arêtes ─────────────────────────────────────────
         // Chaque ConnexionReseau devient une flèche annotée :
-        //   IdA -- "TypeLiaison DebitMbps Mbps" --> IdB
+        // IdA -- "TypeLiaison DebitMbps Mbps" --> IdB
         for (ConnexionReseau c : connexions) {
-            String idA    = sanitizeId(c.getEquipementA().getNom());
-            String idB    = sanitizeId(c.getEquipementB().getNom());
+            String idA = sanitizeId(c.getEquipementA().getNom());
+            String idB = sanitizeId(c.getEquipementB().getNom());
             String liaison = c.getTypeConnexion() + " " + c.getDebitMbps() + " Mbps";
             mermaid.append(String.format("    %s -- \"%s\" --> %s\n", idA, liaison, idB));
         }
@@ -114,9 +117,15 @@ public final class App {
         for (AdresseReseau a : adresses) {
             String id = sanitizeId(a.getNom());
             switch (a.getType()) {
-                case "Routeur": mermaid.append(String.format("    class %s routeur\n", id)); break;
-                case "Serveur": mermaid.append(String.format("    class %s serveur\n", id)); break;
-                default:        mermaid.append(String.format("    class %s poste\n",   id)); break;
+                case "Routeur":
+                    mermaid.append(String.format("    class %s routeur\n", id));
+                    break;
+                case "Serveur":
+                    mermaid.append(String.format("    class %s serveur\n", id));
+                    break;
+                default:
+                    mermaid.append(String.format("    class %s poste\n", id));
+                    break;
             }
         }
 
@@ -125,11 +134,12 @@ public final class App {
     }
 
     /**
-     * Transforme un nom d'équipement en identifiant Mermaid valide.
-     * Remplace tout caractère non alphanumérique (tirets, espaces, points…)
-     * par un underscore {@code _}.
+     * Transforme un nom d'équipement en identifiant Mermaid valide. Remplace
+     * tout caractère non alphanumérique (tirets, espaces, points…) par un
+     * underscore {@code _}.
      *
-     * <p>Exemple : {@code "Routeur-Principal"} → {@code "Routeur_Principal"}
+     * <p>
+     * Exemple : {@code "Routeur-Principal"} → {@code "Routeur_Principal"}
      *
      * @param nom nom brut de l'équipement
      * @return identifiant utilisable directement dans la syntaxe Mermaid
@@ -141,10 +151,9 @@ public final class App {
     // =========================================================================
     // Main
     // =========================================================================
-
     /**
-     * Méthode principale : orchestre la saisie utilisateur, la construction
-     * du rapport Markdown et l'écriture du fichier de sortie.
+     * Méthode principale : orchestre la saisie utilisateur, la construction du
+     * rapport Markdown et l'écriture du fichier de sortie.
      *
      * @param args arguments de la ligne de commande (non utilisés)
      */
@@ -167,31 +176,31 @@ public final class App {
         // Déclaration des équipements réseau
         // =========================================================================
         // Chaque AdresseReseau prend : nom, type, adresse IP (String), masque (String).
-        // Les types reconnus pour le graphe Mermaid sont : "Routeur", "Serveur", "Ordinateur".
+        // Les types reconnus pour le graphe Mermaid sont : "Routeur", "Serveur",
+        // "Ordinateur".
         // Tout autre type sera affiché en rectangle vert générique.
-
         List<AdresseReseau> adresses = new ArrayList<>();
 
         // ── Cœur du réseau : routeurs ─────────────────────────────────────────
-        AdresseReseau routeurPrincipal = new AdresseReseau("Routeur-Principal", "Routeur", "172.16.0.1",   "255.255.0.0");
-        AdresseReseau routeurSite2     = new AdresseReseau("Routeur-Site2",     "Routeur", "172.16.1.1",   "255.255.0.0");
+        AdresseReseau routeurPrincipal = new AdresseReseau("Routeur-Principal", "Routeur", "172.16.0.1", "255.255.0.0");
+        AdresseReseau routeurSite2 = new AdresseReseau("Routeur-Site2", "Routeur", "172.16.1.1", "255.255.0.0");
 
         // ── Zone serveurs (réseau 10.0.0.0/8) ────────────────────────────────
-        AdresseReseau serveurWeb  = new AdresseReseau("Serveur-Web",  "Serveur",    "10.0.0.50",  "255.0.0.0");
-        AdresseReseau serveurBdd  = new AdresseReseau("Serveur-BDD",  "Serveur",    "10.0.0.51",  "255.0.0.0");
-        AdresseReseau serveurFtp  = new AdresseReseau("Serveur-FTP",  "Serveur",    "10.0.0.52",  "255.0.0.0");
-        AdresseReseau serveurDns  = new AdresseReseau("Serveur-DNS",  "Serveur",    "10.0.0.10",  "255.0.0.0");
+        AdresseReseau serveurWeb = new AdresseReseau("Serveur-Web", "Serveur", "10.0.0.50", "255.0.0.0");
+        AdresseReseau serveurBdd = new AdresseReseau("Serveur-BDD", "Serveur", "10.0.0.51", "255.0.0.0");
+        AdresseReseau serveurFtp = new AdresseReseau("Serveur-FTP", "Serveur", "10.0.0.52", "255.0.0.0");
+        AdresseReseau serveurDns = new AdresseReseau("Serveur-DNS", "Serveur", "10.0.0.10", "255.0.0.0");
 
         // ── Zone postes de travail site 1 (réseau 192.168.10.0/24) ───────────
-        AdresseReseau pc1         = new AdresseReseau("PC1",          "Ordinateur", "192.168.10.100", "255.255.255.0");
-        AdresseReseau pc2         = new AdresseReseau("PC2",          "Ordinateur", "192.168.10.101", "255.255.255.0");
-        AdresseReseau pc3         = new AdresseReseau("PC3",          "Ordinateur", "192.168.10.102", "255.255.255.0");
-        AdresseReseau imprimante  = new AdresseReseau("Imprimante-A", "Imprimante", "192.168.10.200", "255.255.255.0");
+        AdresseReseau pc1 = new AdresseReseau("PC1", "Ordinateur", "192.168.10.100", "255.255.255.0");
+        AdresseReseau pc2 = new AdresseReseau("PC2", "Ordinateur", "192.168.10.101", "255.255.255.0");
+        AdresseReseau pc3 = new AdresseReseau("PC3", "Ordinateur", "192.168.10.102", "255.255.255.0");
+        AdresseReseau imprimante = new AdresseReseau("Imprimante-A", "Imprimante", "192.168.10.200", "255.255.255.0");
 
         // ── Zone postes de travail site 2 (réseau 192.168.20.0/24) ───────────
-        AdresseReseau pc4         = new AdresseReseau("PC4",          "Ordinateur", "192.168.20.100", "255.255.255.0");
-        AdresseReseau pc5         = new AdresseReseau("PC5",          "Ordinateur", "192.168.20.101", "255.255.255.0");
-        AdresseReseau pointAcces  = new AdresseReseau("AP-WiFi-S2",   "Borne WiFi", "192.168.20.1",   "255.255.255.0");
+        AdresseReseau pc4 = new AdresseReseau("PC4", "Ordinateur", "192.168.20.100", "255.255.255.0");
+        AdresseReseau pc5 = new AdresseReseau("PC5", "Ordinateur", "192.168.20.101", "255.255.255.0");
+        AdresseReseau pointAcces = new AdresseReseau("AP-WiFi-S2", "Borne WiFi", "192.168.20.1", "255.255.255.0");
 
         // Ajout de tous les équipements à la liste principale
         adresses.add(routeurPrincipal);
@@ -213,33 +222,31 @@ public final class App {
         // =========================================================================
         // ConnexionReseau(équipementA, équipementB, typeConnexion, débitMbps)
         // La flèche dans le graphe va de A vers B.
-
         List<ConnexionReseau> connexions = new ArrayList<>();
 
         // Liaison inter-routeurs (WAN fibre longue distance)
-        connexions.add(new ConnexionReseau(routeurPrincipal, routeurSite2,    "Fibre WAN",  1000));
+        connexions.add(new ConnexionReseau(routeurPrincipal, routeurSite2, "Fibre WAN", 1000));
 
         // Serveurs → routeur principal (liaisons haut débit)
-        connexions.add(new ConnexionReseau(serveurWeb,       routeurPrincipal,"Fibre",      10000));
-        connexions.add(new ConnexionReseau(serveurBdd,       routeurPrincipal,"Fibre",      10000));
-        connexions.add(new ConnexionReseau(serveurFtp,       routeurPrincipal,"Fibre",       5000));
-        connexions.add(new ConnexionReseau(serveurDns,       routeurPrincipal,"Ethernet",    1000));
+        connexions.add(new ConnexionReseau(serveurWeb, routeurPrincipal, "Fibre", 10000));
+        connexions.add(new ConnexionReseau(serveurBdd, routeurPrincipal, "Fibre", 10000));
+        connexions.add(new ConnexionReseau(serveurFtp, routeurPrincipal, "Fibre", 5000));
+        connexions.add(new ConnexionReseau(serveurDns, routeurPrincipal, "Ethernet", 1000));
 
         // Postes site 1 → routeur principal
-        connexions.add(new ConnexionReseau(pc1,              routeurPrincipal,"Ethernet",    1000));
-        connexions.add(new ConnexionReseau(pc2,              routeurPrincipal,"Ethernet",    1000));
-        connexions.add(new ConnexionReseau(pc3,              routeurPrincipal,"Ethernet",    1000));
-        connexions.add(new ConnexionReseau(imprimante,       routeurPrincipal,"Ethernet",     100));
+        connexions.add(new ConnexionReseau(pc1, routeurPrincipal, "Ethernet", 1000));
+        connexions.add(new ConnexionReseau(pc2, routeurPrincipal, "Ethernet", 1000));
+        connexions.add(new ConnexionReseau(pc3, routeurPrincipal, "Ethernet", 1000));
+        connexions.add(new ConnexionReseau(imprimante, routeurPrincipal, "Ethernet", 100));
 
         // Postes site 2 → routeur site 2 (via borne WiFi ou filaire)
-        connexions.add(new ConnexionReseau(pc4,              routeurSite2,    "Ethernet",    1000));
-        connexions.add(new ConnexionReseau(pc5,              pointAcces,      "WiFi",         300));
-        connexions.add(new ConnexionReseau(pointAcces,       routeurSite2,    "Ethernet",    1000));
+        connexions.add(new ConnexionReseau(pc4, routeurSite2, "Ethernet", 1000));
+        connexions.add(new ConnexionReseau(pc5, pointAcces, "WiFi", 300));
+        connexions.add(new ConnexionReseau(pointAcces, routeurSite2, "Ethernet", 1000));
 
         // =========================================================================
         // Calcul des statistiques globales
         // =========================================================================
-
         long totalEquipements = adresses.size();
 
         // Regroupement par type pour le tableau de répartition
@@ -254,7 +261,6 @@ public final class App {
         // =========================================================================
         // Construction du rapport Markdown
         // =========================================================================
-
         StringBuilder md = new StringBuilder();
 
         md.append("# Tableau de Bord & Statistiques Réseau\n\n");
@@ -293,9 +299,9 @@ public final class App {
         md.append("| Nom | Type | Adresse IP | Masque | Réseau | Broadcast | Hôtes du sous-réseau |\n");
         md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :---: |\n");
         for (AdresseReseau a : adresses) {
-            String ipStr        = a.toString().split(" : ")[1].split(" / ")[0];
-            String masqueStr    = a.toString().split(" / ")[1];
-            String reseauStr    = a.adresseReseau().toString().split(" : ")[1].split(" / ")[0];
+            String ipStr = a.toString().split(" : ")[1].split(" / ")[0];
+            String masqueStr = a.toString().split(" / ")[1];
+            String reseauStr = a.adresseReseau().toString().split(" : ")[1].split(" / ")[0];
             String broadcastStr = a.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
             md.append(String.format("| %s | %s | %s | %s | %s | %s | %,d |\n",
                     a.getNom(),
@@ -328,11 +334,11 @@ public final class App {
                 .collect(Collectors.groupingBy(
                         a -> a.adresseReseau().toString().split(" : ")[1].split(" / ")[0]));
         for (Map.Entry<String, List<AdresseReseau>> entree : parReseau.entrySet()) {
-            AdresseReseau ref    = entree.getValue().get(0);
+            AdresseReseau ref = entree.getValue().get(0);
             String adresseReseau = entree.getKey();
-            String masque        = ref.adresseReseau().toString().split(" / ")[1];
-            String broadcast     = ref.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
-            String equipements   = entree.getValue().stream()
+            String masque = ref.adresseReseau().toString().split(" / ")[1];
+            String broadcast = ref.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
+            String equipements = entree.getValue().stream()
                     .map(AdresseReseau::getNom)
                     .collect(Collectors.joining(", "));
             md.append(String.format("| %s | %s | %s | %s | %,d |\n",
@@ -343,7 +349,6 @@ public final class App {
         // =========================================================================
         // Analyse IA (optionnelle)
         // =========================================================================
-
         switch (choixIA) {
 
             // ── Cas 1 : Google Gemini ──────────────────────────────────────────
@@ -360,12 +365,12 @@ public final class App {
                     GenerateContentResponse response = client.models.generateContent(
                             "gemini-2.5-flash-lite",
                             "Voici un rapport réseau en Markdown :\n\n" + md.toString()
-                                + "\n\nFais un résumé de l'état de ce réseau, en français."
-                                + " Les premiers titres doivent être en ####",
+                                    + "\n\nFais un résumé de l'état de ce réseau, en français."
+                                    + " Les premiers titres doivent être en ####",
                             null);
                     md.append("## Analyse IA\n\n");
                     md.append(response.text())
-                      .append("\nAnalyse réalisée avec Gemini 2.5 Flash-Lite.\n\n");
+                            .append("\nAnalyse réalisée avec Gemini 2.5 Flash-Lite.\n\n");
                 } catch (Exception e) {
                     System.err.println("Erreur Gemini : " + e.getMessage());
                 }
@@ -373,7 +378,8 @@ public final class App {
 
             // ── Cas 2 : OpenRouter ────────────────────────────────────────────
             // Appel REST manuel vers l'API OpenRouter (compatible OpenAI).
-            // La clé API doit être définie dans la variable d'environnement OPENROUTER_API_KEY.
+            // La clé API doit être définie dans la variable d'environnement
+            // OPENROUTER_API_KEY.
             case 2:
                 String apiKey = System.getenv("OPENROUTER_API_KEY");
                 if (apiKey == null || apiKey.isBlank()) {
@@ -428,8 +434,8 @@ public final class App {
                             .get("content").getAsString();
 
                     md.append("## Analyse IA\n\n")
-                      .append("Analyse réalisée avec OpenRouter Free.\n\n")
-                      .append(analyse).append("\n");
+                            .append("Analyse réalisée avec OpenRouter Free.\n\n")
+                            .append(analyse).append("\n");
 
                 } catch (java.io.IOException | InterruptedException e) {
                     System.err.println("Erreur OpenRouter (I/O) : " + e.getMessage());
@@ -447,7 +453,6 @@ public final class App {
         // =========================================================================
         // Écriture du fichier de sortie
         // =========================================================================
-
         try {
             Files.writeString(Path.of("rapport_statistiques.md"), md.toString());
             System.out.println("Rapport 'rapport_statistiques.md' généré avec succès !");
