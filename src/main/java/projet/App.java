@@ -14,6 +14,7 @@ import java.util.Scanner;
 import java.util.stream.Collectors;
 
 import com.google.genai.Client;
+import com.google.genai.types.GenerateContentConfig;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -136,6 +137,7 @@ public final class App {
         // ── Choix du moteur IA et du format d'export ──────────────────────────
         int choixIA;
         int choixExport;
+        int maxTokens = 500;
         try (Scanner scanner = new Scanner(System.in)) {
             System.out.println("=== Choisissez le modèle d'analyse IA ===");
             System.out.println("1. Gemini 2.5 Flash-Lite (gratuit, variable GOOGLE_API_KEY)");
@@ -153,6 +155,40 @@ public final class App {
                     System.out.println("Choix invalide. Veuillez saisir 0, 1 ou 2.");
                 }
             } while (choixIA < 0 || choixIA > 2);
+
+            if (choixIA == 1) {
+                System.out.println("\n=== Taille maximale du résumé (Tokens de sortie) ===");
+                System.out.println("1. Court  (~200 tokens) - Idéal pour un survol rapide");
+                System.out.println("2. Moyen  (500 tokens)  - Bon compromis détails/concision");
+                System.out.println("3. Long   (1000 tokens) - Analyse détaillée du rapport");
+
+                int choixTokens;
+                do {
+                    System.out.print("Votre choix de longueur : ");
+                    while (!scanner.hasNextInt()) {
+                        System.out.println("Entrée invalide. Veuillez saisir 1, 2 ou 3.");
+                        System.out.print("Votre choix de longueur : ");
+                        scanner.next();
+                    }
+                    choixTokens = scanner.nextInt();
+                    if (choixTokens < 1 || choixTokens > 3) {
+                        System.out.println("Choix invalide. Veuillez saisir 1, 2 ou 3.");
+                    }
+                } while (choixTokens < 1 || choixTokens > 3);
+
+                switch (choixTokens) {
+                    case 1:
+                        maxTokens = 200;
+                        break;
+                    case 2:
+                        maxTokens = 500;
+                        break;
+                    case 3:
+                        maxTokens = 1000;
+                        break;
+                }
+                System.out.println("-> Limite configurée à : " + maxTokens + " tokens.");
+            }
 
             System.out.println("\n=== Choisissez le format d'export ===");
             System.out.println("1. Markdown uniquement (.md)");
@@ -325,19 +361,38 @@ public final class App {
                     analyseIAReussie = false;
                     break;
                 }
+
                 System.out.println("Analyse IA avec Gemini 2.5 Flash-Lite...");
                 try (Client client = new Client()) {
+                    GenerateContentConfig config = GenerateContentConfig.builder()
+                            .maxOutputTokens(maxTokens)
+                            .temperature(0.2f)
+                            .build();
+
+                    String prompt = "Voici un rapport réseau en Markdown :\n\n" + md.toString()
+                            + "\n\nFais un résumé l'état de ce réseau, en français."
+                            + " Les premiers titres doivent obligatoirement être en ####.";
+
                     GenerateContentResponse response = client.models.generateContent(
                             "gemini-2.5-flash-lite",
-                            "Voici un rapport réseau en Markdown :\n\n" + md.toString()
-                                    + "\n\nFais un résumé de l'état de ce réseau, en français."
-                                    + " Les premiers titres doivent être en ####",
-                            null);
-                    md.append("## Analyse IA\n\n");
-                    md.append(response.text())
-                            .append("\nAnalyse réalisée avec Gemini 2.5 Flash-Lite.\n\n");
+                            prompt,
+                            config);
+
+                    String resultatIA = response.text();
+
+                    if (resultatIA != null && !resultatIA.isBlank()) {
+                        md.append("\n## Analyse IA\n\n");
+                        md.append(resultatIA);
+                        md.append("\n\n*Analyse réalisée automatiquement avec Gemini 2.5 Flash-Lite.*\n\n");
+                        analyseIAReussie = true;
+                    } else {
+                        System.err.println("Erreur : La réponse de l'IA est vide.");
+                        analyseIAReussie = false;
+                    }
+
                 } catch (Exception e) {
                     System.err.println("Erreur Gemini : " + e.getMessage());
+                    e.printStackTrace();
                     analyseIAReussie = false;
                 }
                 break;
