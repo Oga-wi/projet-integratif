@@ -142,7 +142,7 @@ public final class App {
                 }
             } while (choixIA < 0 || choixIA > 3);
 
-            if (choixIA == 1 | choixIA == 2) {
+            if (choixIA == 1 || choixIA == 2) {
                 System.out.println("\n=== Taille maximale du résumé (Tokens de sortie) ===");
                 System.out.println("1. Court  (~200 tokens) - Idéal pour un survol rapide");
                 System.out.println("2. Moyen  (500 tokens)  - Bon compromis détails/concision");
@@ -339,7 +339,9 @@ public final class App {
         boolean analyseIAReussie = true;
 
         switch (choixIA) {
-
+            case 0:
+                analyseIAReussie = true;
+                break;
             case 1:
             case 2:
                 String geminiKey = System.getenv("GOOGLE_API_KEY");
@@ -382,7 +384,7 @@ public final class App {
                             + " Analyse l'état de ce réseau et propose des pistes pour améliorer sa consommation électrique."
                             + " Rédige en français. Les premiers titres doivent obligatoirement être en ####."
                             + " IMPORTANT : Termine impérativement toutes tes phrases et respecte la limite de longueur imposée pour ne pas être coupé.";
-                    
+
                     GenerateContentResponse response = client.models.generateContent(
                             modelIA,
                             prompt,
