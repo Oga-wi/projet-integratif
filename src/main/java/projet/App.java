@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -27,22 +28,6 @@ public final class App {
     private App() {
     }
 
-    // =========================================================================
-    // Génération du graphe Mermaid
-    // =========================================================================
-
-    /**
-     * Génère un bloc de code Mermaid (syntaxe {@code graph TD}) représentant la
-     * topologie du réseau.
-     *
-     * @param adresses   liste de tous les équipements à afficher comme nœuds
-     * @param connexions liste des liaisons physiques entre équipements
-     * @return chaîne Markdown contenant le bloc {@code ```mermaid ... ```}
-     */
-    // =========================================================================
-    // Main
-    // =========================================================================
-
     /**
      * Méthode principale : orchestre la saisie utilisateur, la construction du
      * rapport Markdown et l'export des fichiers.
@@ -50,13 +35,44 @@ public final class App {
      * @param args arguments de la ligne de commande (non utilisés)
      */
     public static void main(String[] args) {
-
-        // ── Choix du moteur IA et du format d'export ──────────────────────────
         int choixIA;
         int choixExport;
         int maxTokens = 500;
+        int ChoixMetadonnees;
+
+        // Déclaration de la variable à l'extérieur du bloc try/if pour qu'elle soit accessible plus bas
+        Metadonnees docMeta = null;
+
         try (Scanner scanner = new Scanner(System.in)) {
-            System.out.println("=== Choisissez le modèle d'analyse IA ===");
+            // ── Définitions des métadonnées
+            System.out.println("=== Voulez vous ajoutez des métadonnées ? ===");
+            System.out.println("1. Oui");
+            System.out.println("2. Non");
+            ChoixMetadonnees = scanner.nextInt();
+            scanner.nextLine(); // Consomme le retour à la ligne après le nextInt()
+
+            if (ChoixMetadonnees == 1) {
+                System.out.print("Entrez le titre du fichier : ");
+                String titre = scanner.nextLine();
+
+                System.out.print("Entrez l'auteur : ");
+                String auteur = scanner.nextLine();
+
+                System.out.print("Entrez l'entreprise : ");
+                String entreprise = scanner.nextLine();
+
+                System.out.print("Entrez la version : ");
+                double version = Double.parseDouble(scanner.nextLine());
+
+                // Initialisation de la variable externe
+                docMeta = new Metadonnees(auteur, LocalDate.now(), titre, entreprise, version);
+
+                System.out.println("\nObjet Métadonnées créé avec succès !");
+                System.out.println("Fichier : " + docMeta.getTitre() + " de " + docMeta.getAuteur());
+            }
+
+            // ── Choix du moteur IA et du format d'export ──────────────────────────
+            System.out.println("\n=== Choisissez le modèle d'analyse IA ===");
             System.out.println("1. Gemini 2.5 Flash-Lite (gratuit, variable GOOGLE_API_KEY)");
             System.out.println("2. Gemini 3.1 Flash-Lite (gratuit, variable GOOGLE_API_KEY) [RECOMMANDER]");
             System.out.println("3. OpenRouter Free       (gratuit, variable OPENROUTER_API_KEY)");
@@ -146,21 +162,19 @@ public final class App {
         AdresseReseau pointAcces = new AdresseReseau("AP-WiFi-S2", "Borne WiFi", "192.168.20.1", "255.255.255.0");
 
         // ── Assignation des VLANs ─────────────────────────────────────────────
-        // VLAN 10 : Serveurs (DMZ)
         serveurWeb.setVlan(10);
         serveurBdd.setVlan(10);
         serveurFtp.setVlan(10);
         serveurDns.setVlan(10);
-        // VLAN 20 : Postes Site Principal
+
         pc1.setVlan(20);
         pc2.setVlan(20);
         pc3.setVlan(20);
         imprimante.setVlan(20);
-        // VLAN 30 : Postes Site 2
+
         pc4.setVlan(30);
         pc5.setVlan(30);
         pointAcces.setVlan(30);
-        // Routeurs : pas de VLAN utilisateur (infrastructure)
 
         adresses.add(routeurPrincipal);
         adresses.add(routeurSite2);
@@ -211,8 +225,20 @@ public final class App {
         // =========================================================================
         StringBuilder md = new StringBuilder();
 
-        md.append("# Tableau de Bord & Statistiques Réseau\n\n");
-        md.append("Ce rapport fournit une analyse globale des infrastructures réseau configurées.\n\n");
+        // Ajout de l'en-tête de métadonnées de manière dynamique
+        if (docMeta != null) {
+            md.append("# ").append(docMeta.getTitre()).append("\n\n");
+            md.append("## Informations sur le document\n\n");
+            md.append("> **Auteur :** ").append(docMeta.getAuteur()).append("  \n");
+            md.append("> **Entreprise :** ").append(docMeta.getEntreprise()).append("  \n");
+            md.append("> **Version :** v").append(docMeta.getVersion()).append("  \n");
+            md.append("> **Date de génération :** ").append(docMeta.getDateCreation()).append("\n\n");
+            md.append("---\n\n");
+        } else {
+            md.append("# Tableau de Bord & Statistiques Réseau\n\n");
+        }
+
+        md.append("Ce rapport fournit une analysis globale des infrastructures réseau configurées.\n\n");
 
         md.append("## Topologie Réseau\n\n");
         md.append("> 🟠 Routeurs  🔵 Serveurs  🟢 Postes / Autres\n\n");
@@ -366,7 +392,7 @@ public final class App {
                     if (resultatIA != null && !resultatIA.isBlank()) {
                         md.append("\n## Analyse IA\n\n");
                         md.append(resultatIA);
-                        md.append("\n\n*Analyse réalisée automatiquement avec").append(modelIA).append("*\n\n");
+                        md.append("\n\n*Analyse réalisée automatiquement avec ").append(modelIA).append("*\n\n");
                         analyseIAReussie = true;
                     } else {
                         System.err.println("Erreur : La réponse de l'IA est vide.");
@@ -375,7 +401,6 @@ public final class App {
 
                 } catch (Exception e) {
                     System.err.println("Erreur Gemini : " + e.getMessage());
-                    e.printStackTrace();
                     analyseIAReussie = false;
                 }
                 break;
