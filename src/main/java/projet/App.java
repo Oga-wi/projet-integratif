@@ -39,74 +39,6 @@ public final class App {
      * @param connexions liste des liaisons physiques entre équipements
      * @return chaîne Markdown contenant le bloc {@code ```mermaid ... ```}
      */
-    private static String genererMermaidTopologie(List<AdresseReseau> adresses,
-            List<ConnexionReseau> connexions) {
-        StringBuilder mermaid = new StringBuilder();
-
-        mermaid.append("```mermaid\ngraph TD\n");
-
-        for (AdresseReseau a : adresses) {
-            String id = sanitizeId(a.getNom());
-            String ip = a.toString().split(" : ")[1].split(" / ")[0];
-            String label = a.getNom() + "\\n" + ip;
-
-            switch (a.getType()) {
-                case "Routeur":
-                    mermaid.append(String.format("    %s{{%s}}\n", id, label));
-                    break;
-                case "Serveur":
-                    mermaid.append(String.format("    %s(%s)\n", id, label));
-                    break;
-                default:
-                    mermaid.append(String.format("    %s[%s]\n", id, label));
-                    break;
-            }
-        }
-
-        mermaid.append("\n");
-
-        for (ConnexionReseau c : connexions) {
-            String idA = sanitizeId(c.getEquipementA().getNom());
-            String idB = sanitizeId(c.getEquipementB().getNom());
-            String liaison = c.getTypeConnexion() + " " + c.getDebitMbps() + " Mbps";
-            mermaid.append(String.format("    %s -- \"%s\" --> %s\n", idA, liaison, idB));
-        }
-
-        mermaid.append("\n");
-
-        mermaid.append("    classDef routeur fill:#f0ad4e,stroke:#c87f0a,color:#000\n");
-        mermaid.append("    classDef serveur fill:#5bc0de,stroke:#31b0d5,color:#000\n");
-        mermaid.append("    classDef poste   fill:#5cb85c,stroke:#4cae4c,color:#000\n");
-
-        for (AdresseReseau a : adresses) {
-            String id = sanitizeId(a.getNom());
-            switch (a.getType()) {
-                case "Routeur":
-                    mermaid.append(String.format("    class %s routeur\n", id));
-                    break;
-                case "Serveur":
-                    mermaid.append(String.format("    class %s serveur\n", id));
-                    break;
-                default:
-                    mermaid.append(String.format("    class %s poste\n", id));
-                    break;
-            }
-        }
-
-        mermaid.append("```\n");
-        return mermaid.toString();
-    }
-
-    /**
-     * Transforme un nom d'équipement en identifiant Mermaid valide.
-     *
-     * @param nom nom brut de l'équipement
-     * @return identifiant utilisable directement dans la syntaxe Mermaid
-     */
-    private static String sanitizeId(String nom) {
-        return nom.replaceAll("[^a-zA-Z0-9]", "_");
-    }
-
     // =========================================================================
     // Main
     // =========================================================================
@@ -213,6 +145,23 @@ public final class App {
         AdresseReseau pc5 = new AdresseReseau("PC5", "Ordinateur", "192.168.20.101", "255.255.255.0");
         AdresseReseau pointAcces = new AdresseReseau("AP-WiFi-S2", "Borne WiFi", "192.168.20.1", "255.255.255.0");
 
+        // ── Assignation des VLANs ─────────────────────────────────────────────
+        // VLAN 10 : Serveurs (DMZ)
+        serveurWeb.setVlan(10);
+        serveurBdd.setVlan(10);
+        serveurFtp.setVlan(10);
+        serveurDns.setVlan(10);
+        // VLAN 20 : Postes Site Principal
+        pc1.setVlan(20);
+        pc2.setVlan(20);
+        pc3.setVlan(20);
+        imprimante.setVlan(20);
+        // VLAN 30 : Postes Site 2
+        pc4.setVlan(30);
+        pc5.setVlan(30);
+        pointAcces.setVlan(30);
+        // Routeurs : pas de VLAN utilisateur (infrastructure)
+
         adresses.add(routeurPrincipal);
         adresses.add(routeurSite2);
         adresses.add(serveurWeb);
@@ -267,7 +216,7 @@ public final class App {
 
         md.append("## Topologie Réseau\n\n");
         md.append("> 🟠 Routeurs  🔵 Serveurs  🟢 Postes / Autres\n\n");
-        md.append(genererMermaidTopologie(adresses, connexions));
+        md.append(MermaidGenerator.genererTopologie(adresses, connexions));
         md.append("\n");
 
         md.append("## Indicateurs Clés\n\n");
@@ -287,18 +236,20 @@ public final class App {
         md.append("\n");
 
         md.append("## Détail des Équipements\n\n");
-        md.append("| Nom | Type | Adresse IP | Masque | Réseau | Broadcast | Hôtes du sous-réseau |\n");
-        md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :---: |\n");
+        md.append("| Nom | Type | Adresse IP | Masque | Réseau | Broadcast | Hôtes du sous-réseau | VLAN |\n");
+        md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: |\n");
         for (AdresseReseau a : adresses) {
             String ipStr = a.toString().split(" : ")[1].split(" / ")[0];
             String masqueStr = a.toString().split(" / ")[1];
             String reseauStr = a.adresseReseau().toString().split(" : ")[1].split(" / ")[0];
             String broadcastStr = a.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
-            md.append(String.format("| %s | %s | %s | %s | %s | %s | %,d |\n",
+            String vlanStr = a.getVlan() == 0 ? "-" : String.valueOf(a.getVlan());
+            md.append(String.format("| %s | %s | %s | %s | %s | %s | %,d | %s |\n",
                     a.getNom(),
                     a.getType().isEmpty() ? "Inconnu" : a.getType(),
                     ipStr, masqueStr, reseauStr, broadcastStr,
-                    a.nombreHotes()));
+                    a.nombreHotes(),
+                    vlanStr));
         }
         md.append("\n");
 
@@ -331,6 +282,26 @@ public final class App {
             md.append(String.format("| %s | %s | %s | %s | %,d |\n",
                     adresseReseau, masque, broadcast, equipements, ref.nombreHotes()));
         }
+        md.append("\n");
+
+        // ── Section VLANs ─────────────────────────────────────────────────────
+        md.append("## VLANs\n\n");
+        md.append("| ID VLAN | Nom | Équipements |\n");
+        md.append("| :---: | :--- | :--- |\n");
+        Map<Integer, List<AdresseReseau>> parVlan = adresses.stream()
+                .filter(a -> a.getVlan() != 0)
+                .collect(Collectors.groupingBy(AdresseReseau::getVlan));
+        java.util.Map<Integer, String> nomsVlan = new java.util.LinkedHashMap<>();
+        nomsVlan.put(10, "Serveurs (DMZ)");
+        nomsVlan.put(20, "Postes Site Principal");
+        nomsVlan.put(30, "Postes Site 2");
+        new java.util.TreeMap<>(parVlan).forEach((vlanId, membres) -> {
+            String nomVlan = nomsVlan.getOrDefault(vlanId, "VLAN " + vlanId);
+            String equipements = membres.stream()
+                    .map(AdresseReseau::getNom)
+                    .collect(Collectors.joining(", "));
+            md.append(String.format("| %d | %s | %s |\n", vlanId, nomVlan, equipements));
+        });
         md.append("\n");
 
         // =========================================================================

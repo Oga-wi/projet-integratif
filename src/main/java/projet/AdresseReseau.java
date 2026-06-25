@@ -6,6 +6,7 @@ public class AdresseReseau {
     private String type;
     private int ip;
     private int masque;
+    private int vlan; // 0 = pas de VLAN
 
     // Constructeurs sans nom (compatibilité avec l'existant)
     public AdresseReseau(int ip, int masque) {
@@ -24,12 +25,13 @@ public class AdresseReseau {
         this(nom, "", ip, masque);
     }
 
-    // Nouveaux constructeurs avec nom
+    // Constructeurs avec nom
     public AdresseReseau(String nom, String type, int ip, int masque) {
         this.nom = nom;
         this.type = type;
         this.ip = ip;
         this.masque = masque;
+        this.vlan = 0;
     }
 
     public AdresseReseau(String nom, String type, String ip, String masque) {
@@ -72,6 +74,14 @@ public class AdresseReseau {
         this.nom = nom;
     }
 
+    public int getVlan() {
+        return vlan;
+    }
+
+    public void setVlan(int vlan) {
+        this.vlan = vlan;
+    }
+
     public AdresseReseau adresseReseau() {
         int reseau = this.ip & this.masque;
         return new AdresseReseau(this.nom, reseau, this.masque);
@@ -92,14 +102,15 @@ public class AdresseReseau {
 
     public String toJson() {
         return String.format(
-                "{\"nom\":\"%s\",\"type\":\"%s\",\"ip\":\"%s\",\"masque\":\"%s\",\"adresse reseau\":\"%s\",\"adresse broadcast\":\"%s\",\"nombre hotes\":%d}",
+                "{\"nom\":\"%s\",\"type\":\"%s\",\"ip\":\"%s\",\"masque\":\"%s\",\"adresse reseau\":\"%s\",\"adresse broadcast\":\"%s\",\"nombre hotes\":%d,\"vlan\":%d}",
                 nom,
                 type,
                 entierEnAdresse(ip),
                 entierEnAdresse(masque),
                 entierEnAdresse(adresseReseau().ip),
                 entierEnAdresse(adresseBroadcast().ip),
-                nombreHotes()
+                nombreHotes(),
+                vlan
         );
     }
 
