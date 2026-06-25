@@ -3,11 +3,11 @@ package projet;
 import java.time.LocalDate;
 
 public class Metadonnees {
-    private String auteur;
-    private LocalDate dateCreation;
-    private String titre;
-    private String entreprise;
-    private Double version;
+    private final String auteur;
+    private final LocalDate dateCreation;
+    private final String titre;
+    private final String entreprise;
+    private final Double version;
 
     public Metadonnees(String auteur, LocalDate dateCreation, String titre, String entreprise, Double version) {
         this.auteur = auteur;
