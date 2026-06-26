@@ -56,12 +56,13 @@ graph TD
 
 ```
 projet/
-├── App.java               # Entry point — full orchestration
-├── AdresseReseau.java     # Data model — network calculations and JSON serialisation
-├── ConnexionReseau.java   # Model for a physical link between two devices
-├── MermaidGenerator.java  # Mermaid diagram generator (topology)
-├── ExportPDF.java         # Markdown → PDF converter (via OpenPDF)
-└── Metadonnees.java       # Report header data (author, version, etc.)
+├── App.java                 # Entry point — full orchestration
+├── AdresseReseau.java       # Data model — network calculations and JSON serialisation
+├── ConnexionReseau.java     # Model for a physical link between two devices
+├── ConfigurationReseau.java # Network plan generator
+├── MermaidGenerator.java    # Mermaid diagram generator (topology)
+├── ExportPDF.java           # Markdown → PDF converter (via OpenPDF)
+└── Metadonnees.java         # Report header data (author, version, etc.)
 ```
 
 ### Class Descriptions
