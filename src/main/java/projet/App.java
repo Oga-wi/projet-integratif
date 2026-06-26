@@ -38,20 +38,25 @@ public final class App {
         int choixIA;
         int choixExport;
         int maxTokens = 500;
-        int ChoixMetadonnees;
+        int choixMetadonnees;
+        int choixReseau;
 
-        // Déclaration de la variable à l'extérieur du bloc try/if pour qu'elle soit accessible plus bas
         Metadonnees docMeta = null;
+        List<AdresseReseau> adresses;
+        List<ConnexionReseau> connexions;
 
         try (Scanner scanner = new Scanner(System.in)) {
-            // ── Définitions des métadonnées
+
+            // =========================================================================
+            // Métadonnées
+            // =========================================================================
             System.out.println("=== Voulez vous ajoutez des métadonnées ? ===");
             System.out.println("1. Oui");
             System.out.println("2. Non");
-            ChoixMetadonnees = scanner.nextInt();
-            scanner.nextLine(); // Consomme le retour à la ligne après le nextInt()
+            choixMetadonnees = scanner.nextInt();
+            scanner.nextLine();
 
-            if (ChoixMetadonnees == 1) {
+            if (choixMetadonnees == 1) {
                 System.out.print("Entrez le titre du fichier : ");
                 String titre = scanner.nextLine();
 
@@ -64,14 +69,15 @@ public final class App {
                 System.out.print("Entrez la version : ");
                 double version = Double.parseDouble(scanner.nextLine());
 
-                // Initialisation de la variable externe
                 docMeta = new Metadonnees(auteur, LocalDate.now(), titre, entreprise, version);
 
                 System.out.println("\nObjet Métadonnées créé avec succès !");
                 System.out.println("Fichier : " + docMeta.getTitre() + " de " + docMeta.getAuteur());
             }
 
-            // ── Choix du moteur IA et du format d'export ──────────────────────────
+            // =========================================================================
+            // Choix du modèle IA
+            // =========================================================================
             System.out.println("\n=== Choisissez le modèle d'analyse IA ===");
             System.out.println("1. Gemini 2.5 Flash-Lite (gratuit, variable GOOGLE_API_KEY)");
             System.out.println("2. Gemini 3.1 Flash-Lite (gratuit, variable GOOGLE_API_KEY) [RECOMMANDER]");
@@ -111,19 +117,16 @@ public final class App {
                 } while (choixTokens < 1 || choixTokens > 3);
 
                 switch (choixTokens) {
-                    case 1:
-                        maxTokens = 200;
-                        break;
-                    case 2:
-                        maxTokens = 500;
-                        break;
-                    case 3:
-                        maxTokens = 1000;
-                        break;
+                    case 1: maxTokens = 200;  break;
+                    case 2: maxTokens = 500;  break;
+                    case 3: maxTokens = 1000; break;
                 }
                 System.out.println("-> Limite configurée à : " + maxTokens + " tokens.");
             }
 
+            // =========================================================================
+            // Choix du format d'export
+            // =========================================================================
             System.out.println("\n=== Choisissez le format d'export ===");
             System.out.println("1. Markdown uniquement (.md)");
             System.out.println("2. PDF uniquement      (.pdf)");
@@ -140,73 +143,82 @@ public final class App {
                     System.out.println("Choix invalide. Veuillez saisir 1, 2 ou 3.");
                 }
             } while (choixExport < 1 || choixExport > 3);
+
+            // =========================================================================
+            // Choix du réseau
+            // =========================================================================
+            System.out.println("\n=== Configuration du réseau ===");
+            System.out.println("1. Utiliser le réseau de démonstration (hardcodé)");
+            System.out.println("2. Saisir mon propre réseau");
+            do {
+                System.out.print("Votre choix : ");
+                while (!scanner.hasNextInt()) {
+                    System.out.println("Entrée invalide.");
+                    System.out.print("Votre choix : ");
+                    scanner.next();
+                }
+                choixReseau = scanner.nextInt();
+                scanner.nextLine();
+                if (choixReseau < 1 || choixReseau > 2) {
+                    System.out.println("Choix invalide.");
+                }
+            } while (choixReseau < 1 || choixReseau > 2);
+
+            if (choixReseau == 2) {
+                // ── Mode saisie manuelle ──────────────────────────────────────
+                Object[] config = ConfigurationReseau.saisirReseau(scanner);
+                adresses   = (List<AdresseReseau>)  config[0];
+                connexions = (List<ConnexionReseau>) config[1];
+
+            } else {
+                // ── Mode démonstration (réseau hardcodé) ──────────────────────
+                adresses   = new ArrayList<>();
+                connexions = new ArrayList<>();
+
+                AdresseReseau routeurPrincipal = new AdresseReseau("Routeur-Principal", "Routeur",    "172.16.0.1",     "255.255.0.0");
+                AdresseReseau routeurSite2     = new AdresseReseau("Routeur-Site2",     "Routeur",    "172.16.1.1",     "255.255.0.0");
+                AdresseReseau serveurWeb       = new AdresseReseau("Serveur-Web",       "Serveur",    "10.0.0.50",      "255.0.0.0");
+                AdresseReseau serveurBdd       = new AdresseReseau("Serveur-BDD",       "Serveur",    "10.0.0.51",      "255.0.0.0");
+                AdresseReseau serveurFtp       = new AdresseReseau("Serveur-FTP",       "Serveur",    "10.0.0.52",      "255.0.0.0");
+                AdresseReseau serveurDns       = new AdresseReseau("Serveur-DNS",       "Serveur",    "10.0.0.10",      "255.0.0.0");
+                AdresseReseau pc1              = new AdresseReseau("PC1",               "Ordinateur", "192.168.10.100", "255.255.255.0");
+                AdresseReseau pc2              = new AdresseReseau("PC2",               "Ordinateur", "192.168.10.101", "255.255.255.0");
+                AdresseReseau pc3              = new AdresseReseau("PC3",               "Ordinateur", "192.168.10.102", "255.255.255.0");
+                AdresseReseau imprimante       = new AdresseReseau("Imprimante-A",      "Imprimante", "192.168.10.200", "255.255.255.0");
+                AdresseReseau pc4              = new AdresseReseau("PC4",               "Ordinateur", "192.168.20.100", "255.255.255.0");
+                AdresseReseau pc5              = new AdresseReseau("PC5",               "Ordinateur", "192.168.20.101", "255.255.255.0");
+                AdresseReseau pointAcces       = new AdresseReseau("AP-WiFi-S2",        "Borne WiFi", "192.168.20.1",   "255.255.255.0");
+
+                // VLANs
+                serveurWeb.setVlan(10); serveurBdd.setVlan(10);
+                serveurFtp.setVlan(10); serveurDns.setVlan(10);
+                pc1.setVlan(20); pc2.setVlan(20); pc3.setVlan(20); imprimante.setVlan(20);
+                pc4.setVlan(30); pc5.setVlan(30); pointAcces.setVlan(30);
+
+                adresses.add(routeurPrincipal); adresses.add(routeurSite2);
+                adresses.add(serveurWeb);       adresses.add(serveurBdd);
+                adresses.add(serveurFtp);       adresses.add(serveurDns);
+                adresses.add(pc1);              adresses.add(pc2);
+                adresses.add(pc3);              adresses.add(imprimante);
+                adresses.add(pc4);              adresses.add(pc5);
+                adresses.add(pointAcces);
+
+                connexions.add(new ConnexionReseau(routeurPrincipal, routeurSite2,    "Fibre WAN", 1000));
+                connexions.add(new ConnexionReseau(serveurWeb,       routeurPrincipal, "Fibre",   10000));
+                connexions.add(new ConnexionReseau(serveurBdd,       routeurPrincipal, "Fibre",   10000));
+                connexions.add(new ConnexionReseau(serveurFtp,       routeurPrincipal, "Fibre",    5000));
+                connexions.add(new ConnexionReseau(serveurDns,       routeurPrincipal, "Ethernet", 1000));
+                connexions.add(new ConnexionReseau(pc1,              routeurPrincipal, "Ethernet", 1000));
+                connexions.add(new ConnexionReseau(pc2,              routeurPrincipal, "Ethernet", 1000));
+                connexions.add(new ConnexionReseau(pc3,              routeurPrincipal, "Ethernet", 1000));
+                connexions.add(new ConnexionReseau(imprimante,       routeurPrincipal, "Ethernet",  100));
+                connexions.add(new ConnexionReseau(pc4,              routeurSite2,     "Ethernet", 1000));
+                connexions.add(new ConnexionReseau(pc5,              pointAcces,       "WiFi",      300));
+                connexions.add(new ConnexionReseau(pointAcces,       routeurSite2,     "Ethernet", 1000));
+            }
+
+        // Fin du try-with-resources Scanner
         }
-
-        // =========================================================================
-        // Déclaration des équipements réseau
-        // =========================================================================
-        List<AdresseReseau> adresses = new ArrayList<>();
-
-        AdresseReseau routeurPrincipal = new AdresseReseau("Routeur-Principal", "Routeur", "172.16.0.1", "255.255.0.0");
-        AdresseReseau routeurSite2 = new AdresseReseau("Routeur-Site2", "Routeur", "172.16.1.1", "255.255.0.0");
-        AdresseReseau serveurWeb = new AdresseReseau("Serveur-Web", "Serveur", "10.0.0.50", "255.0.0.0");
-        AdresseReseau serveurBdd = new AdresseReseau("Serveur-BDD", "Serveur", "10.0.0.51", "255.0.0.0");
-        AdresseReseau serveurFtp = new AdresseReseau("Serveur-FTP", "Serveur", "10.0.0.52", "255.0.0.0");
-        AdresseReseau serveurDns = new AdresseReseau("Serveur-DNS", "Serveur", "10.0.0.10", "255.0.0.0");
-        AdresseReseau pc1 = new AdresseReseau("PC1", "Ordinateur", "192.168.10.100", "255.255.255.0");
-        AdresseReseau pc2 = new AdresseReseau("PC2", "Ordinateur", "192.168.10.101", "255.255.255.0");
-        AdresseReseau pc3 = new AdresseReseau("PC3", "Ordinateur", "192.168.10.102", "255.255.255.0");
-        AdresseReseau imprimante = new AdresseReseau("Imprimante-A", "Imprimante", "192.168.10.200", "255.255.255.0");
-        AdresseReseau pc4 = new AdresseReseau("PC4", "Ordinateur", "192.168.20.100", "255.255.255.0");
-        AdresseReseau pc5 = new AdresseReseau("PC5", "Ordinateur", "192.168.20.101", "255.255.255.0");
-        AdresseReseau pointAcces = new AdresseReseau("AP-WiFi-S2", "Borne WiFi", "192.168.20.1", "255.255.255.0");
-
-        // ── Assignation des VLANs ─────────────────────────────────────────────
-        serveurWeb.setVlan(10);
-        serveurBdd.setVlan(10);
-        serveurFtp.setVlan(10);
-        serveurDns.setVlan(10);
-
-        pc1.setVlan(20);
-        pc2.setVlan(20);
-        pc3.setVlan(20);
-        imprimante.setVlan(20);
-
-        pc4.setVlan(30);
-        pc5.setVlan(30);
-        pointAcces.setVlan(30);
-
-        adresses.add(routeurPrincipal);
-        adresses.add(routeurSite2);
-        adresses.add(serveurWeb);
-        adresses.add(serveurBdd);
-        adresses.add(serveurFtp);
-        adresses.add(serveurDns);
-        adresses.add(pc1);
-        adresses.add(pc2);
-        adresses.add(pc3);
-        adresses.add(imprimante);
-        adresses.add(pc4);
-        adresses.add(pc5);
-        adresses.add(pointAcces);
-
-        // =========================================================================
-        // Déclaration des connexions réseau
-        // =========================================================================
-        List<ConnexionReseau> connexions = new ArrayList<>();
-
-        connexions.add(new ConnexionReseau(routeurPrincipal, routeurSite2, "Fibre WAN", 1000));
-        connexions.add(new ConnexionReseau(serveurWeb, routeurPrincipal, "Fibre", 10000));
-        connexions.add(new ConnexionReseau(serveurBdd, routeurPrincipal, "Fibre", 10000));
-        connexions.add(new ConnexionReseau(serveurFtp, routeurPrincipal, "Fibre", 5000));
-        connexions.add(new ConnexionReseau(serveurDns, routeurPrincipal, "Ethernet", 1000));
-        connexions.add(new ConnexionReseau(pc1, routeurPrincipal, "Ethernet", 1000));
-        connexions.add(new ConnexionReseau(pc2, routeurPrincipal, "Ethernet", 1000));
-        connexions.add(new ConnexionReseau(pc3, routeurPrincipal, "Ethernet", 1000));
-        connexions.add(new ConnexionReseau(imprimante, routeurPrincipal, "Ethernet", 100));
-        connexions.add(new ConnexionReseau(pc4, routeurSite2, "Ethernet", 1000));
-        connexions.add(new ConnexionReseau(pc5, pointAcces, "WiFi", 300));
-        connexions.add(new ConnexionReseau(pointAcces, routeurSite2, "Ethernet", 1000));
 
         // =========================================================================
         // Calcul des statistiques globales
@@ -225,7 +237,6 @@ public final class App {
         // =========================================================================
         StringBuilder md = new StringBuilder();
 
-        // Ajout de l'en-tête de métadonnées de manière dynamique
         if (docMeta != null) {
             md.append("# ").append(docMeta.getTitre()).append("\n\n");
             md.append("## Informations sur le document\n\n");
@@ -265,11 +276,11 @@ public final class App {
         md.append("| Nom | Type | Adresse IP | Masque | Réseau | Broadcast | Hôtes du sous-réseau | VLAN |\n");
         md.append("| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: |\n");
         for (AdresseReseau a : adresses) {
-            String ipStr = a.toString().split(" : ")[1].split(" / ")[0];
-            String masqueStr = a.toString().split(" / ")[1];
-            String reseauStr = a.adresseReseau().toString().split(" : ")[1].split(" / ")[0];
+            String ipStr        = a.toString().split(" : ")[1].split(" / ")[0];
+            String masqueStr    = a.toString().split(" / ")[1];
+            String reseauStr    = a.adresseReseau().toString().split(" : ")[1].split(" / ")[0];
             String broadcastStr = a.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
-            String vlanStr = a.getVlan() == 0 ? "-" : String.valueOf(a.getVlan());
+            String vlanStr      = a.getVlan() == 0 ? "-" : String.valueOf(a.getVlan());
             md.append(String.format("| %s | %s | %s | %s | %s | %s | %,d | %s |\n",
                     a.getNom(),
                     a.getType().isEmpty() ? "Inconnu" : a.getType(),
@@ -298,11 +309,11 @@ public final class App {
                 .collect(Collectors.groupingBy(
                         a -> a.adresseReseau().toString().split(" : ")[1].split(" / ")[0]));
         for (Map.Entry<String, List<AdresseReseau>> entree : parReseau.entrySet()) {
-            AdresseReseau ref = entree.getValue().get(0);
-            String adresseReseau = entree.getKey();
-            String masque = ref.adresseReseau().toString().split(" / ")[1];
-            String broadcast = ref.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
-            String equipements = entree.getValue().stream()
+            AdresseReseau ref     = entree.getValue().get(0);
+            String adresseReseau  = entree.getKey();
+            String masque         = ref.adresseReseau().toString().split(" / ")[1];
+            String broadcast      = ref.adresseBroadcast().toString().split(" : ")[1].split(" / ")[0];
+            String equipements    = entree.getValue().stream()
                     .map(AdresseReseau::getNom)
                     .collect(Collectors.joining(", "));
             md.append(String.format("| %s | %s | %s | %s | %,d |\n",
@@ -322,7 +333,7 @@ public final class App {
         nomsVlan.put(20, "Postes Site Principal");
         nomsVlan.put(30, "Postes Site 2");
         new java.util.TreeMap<>(parVlan).forEach((vlanId, membres) -> {
-            String nomVlan = nomsVlan.getOrDefault(vlanId, "VLAN " + vlanId);
+            String nomVlan     = nomsVlan.getOrDefault(vlanId, "VLAN " + vlanId);
             String equipements = membres.stream()
                     .map(AdresseReseau::getNom)
                     .collect(Collectors.joining(", "));
@@ -339,6 +350,7 @@ public final class App {
             case 0:
                 analyseIAReussie = true;
                 break;
+
             case 1:
             case 2:
                 String geminiKey = System.getenv("GOOGLE_API_KEY");
@@ -352,7 +364,7 @@ public final class App {
                 if (choixIA == 1) {
                     System.out.println("Analyse IA avec Gemini 2.5 Flash-Lite...");
                     modelIA = "gemini-2.5-flash-lite";
-                } else if (choixIA == 2) {
+                } else {
                     System.out.println("Analyse IA avec Gemini 3.1 Flash-Lite...");
                     modelIA = "gemini-3.1-flash-lite";
                 }
@@ -365,15 +377,9 @@ public final class App {
 
                     String consigneLongueur;
                     switch (maxTokens) {
-                        case 200:
-                            consigneLongueur = "Fais un résumé TRÈS COURT et concis (maximum 3 à 4 phrases).";
-                            break;
-                        case 1000:
-                            consigneLongueur = "Fais une analyse détaillée et complète.";
-                            break;
-                        default:
-                            consigneLongueur = "Fais un résumé de longueur moyenne (environ 2 à 3 paragraphes).";
-                            break;
+                        case 200:  consigneLongueur = "Fais un résumé TRÈS COURT et concis (maximum 3 à 4 phrases)."; break;
+                        case 1000: consigneLongueur = "Fais une analyse détaillée et complète."; break;
+                        default:   consigneLongueur = "Fais un résumé de longueur moyenne (environ 2 à 3 paragraphes)."; break;
                     }
 
                     String prompt = "Voici un rapport réseau en Markdown :\n\n" + md.toString()
@@ -382,11 +388,7 @@ public final class App {
                             + " Rédige en français. Les premiers titres doivent obligatoirement être en ####."
                             + " IMPORTANT : Termine impérativement toutes tes phrases et respecte la limite de longueur imposée pour ne pas être coupé.";
 
-                    GenerateContentResponse response = client.models.generateContent(
-                            modelIA,
-                            prompt,
-                            config);
-
+                    GenerateContentResponse response = client.models.generateContent(modelIA, prompt, config);
                     String resultatIA = response.text();
 
                     if (resultatIA != null && !resultatIA.isBlank()) {
@@ -416,13 +418,11 @@ public final class App {
                 try {
                     JsonObject messageSystem = new JsonObject();
                     messageSystem.addProperty("role", "system");
-                    messageSystem.addProperty("content",
-                            "Tu es un assistant utile qui analyse des rapports réseau.");
+                    messageSystem.addProperty("content", "Tu es un assistant utile qui analyse des rapports réseau.");
 
                     JsonObject messageUser = new JsonObject();
                     messageUser.addProperty("role", "user");
-                    messageUser.addProperty("content",
-                            "Analyse ce rapport réseau :\n\n" + md.toString());
+                    messageUser.addProperty("content", "Analyse ce rapport réseau :\n\n" + md.toString());
 
                     com.google.gson.JsonArray messages = new com.google.gson.JsonArray();
                     messages.add(messageSystem);
